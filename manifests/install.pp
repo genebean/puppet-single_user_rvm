@@ -89,6 +89,7 @@ define single_user_rvm::install (
   $home         = undef,
   $proxy        = undef,
   $auto_upgrade = false,
+  $unprivileged = false,
 ) {
 
   if $home {
@@ -106,13 +107,22 @@ define single_user_rvm::install (
     $proxy_opt = ''
   }
 
-  $import_key = strip("${proxy_opt} curl -sSL https://rvm.io/mpapis.asc | gpg2 --import -")
+  $import_key = strip("${proxy_opt} gpg2 --keyserver hkp://pool.sks-keyservers.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB")
   $install_command = strip("${proxy_opt} curl -L https://get.rvm.io | bash -s ${version}")
 
-  exec { $import_key:
+  exec { 'import key 409B6B1796C275462A1703113804BB82D39DC0E3':
+    command     => $import_key,
     path        => '/usr/bin:/usr/sbin:/bin:/sbin',
     user        => $user,
-    onlyif      => "test `gpg --list-keys | grep 'RVM signing' | wc -l` -eq 0",
+    onlyif      => "test `gpg --list-keys | grep '409B6B1796C275462A1703113804BB82D39DC0E3' | wc -l` -eq 0",
+    cwd         => $homedir,
+    environment => "HOME=${homedir}",
+  }
+  exec { 'import key 7D2BAF1CF37B13E2069D6956105BD0E739499BDB':
+    command     => $import_key,
+    path        => '/usr/bin:/usr/sbin:/bin:/sbin',
+    user        => $user,
+    onlyif      => "test `gpg --list-keys | grep '7D2BAF1CF37B13E2069D6956105BD0E739499BDB' | wc -l` -eq 0",
     cwd         => $homedir,
     environment => "HOME=${homedir}",
   }
@@ -122,7 +132,25 @@ define single_user_rvm::install (
     user        => $user,
     cwd         => $homedir,
     environment => "HOME=${homedir}",
-    require     => [ Package['curl'], Package['bash'], User[$user], Exec[$import_key] ],
+    require     => [
+      Package['curl'],
+      Package['bash'],
+      User[$user],
+      Exec['import key 409B6B1796C275462A1703113804BB82D39DC0E3'],
+      Exec['import key 7D2BAF1CF37B13E2069D6956105BD0E739499BDB'],
+    ],
+  }
+
+  # unprivileged users cannot run the commands needed to make autolibs work
+  if $unprivileged {
+    exec { 'rvm autolibs disable':
+      path        => "${homedir}/.rvm/bin:/usr/bin:/usr/sbin:/bin",
+      user        => $user,
+      cwd         => $homedir,
+      environment => "HOME=${homedir}",
+      refreshonly => true,
+      subscribe   => Exec[$install_command],
+    }
   }
 
   $rvm_executable = "${homedir}/.rvm/bin/rvm"
