@@ -92,7 +92,12 @@ define single_user_rvm::install (
   $home         = undef,
   $proxy        = undef,
   $auto_upgrade = false,
+<<<<<<< HEAD
   $path		= undef
+||||||| parent of 7195743 (Fixes needed to get things working on Debian 9)
+=======
+  $unprivileged = false,
+>>>>>>> 7195743 (Fixes needed to get things working on Debian 9)
 ) {
 
   if $home {
@@ -147,7 +152,25 @@ define single_user_rvm::install (
     user        => $user,
     cwd         => $homedir,
     environment => "HOME=${homedir}",
-    require     => [ Package['curl'], Package['bash'], User[$user], Exec[$import_key_1], Exec[$import_key_2] ],
+    require     => [
+      Package['curl'],
+      Package['bash'],
+      User[$user],
+      Exec[$import_key_1],
+      Exec[$import_key_2],
+    ],
+  }
+
+  # unprivileged users cannot run the commands needed to make autolibs work
+  if $unprivileged {
+    exec { 'rvm autolibs disable':
+      path        => "${homedir}/.rvm/bin:/usr/bin:/usr/sbin:/bin",
+      user        => $user,
+      cwd         => $homedir,
+      environment => "HOME=${homedir}",
+      refreshonly => true,
+      subscribe   => Exec[$install_command],
+    }
   }
 
   $rvm_executable = "${homedir}/.rvm/bin/rvm"
