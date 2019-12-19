@@ -114,7 +114,7 @@ define single_user_rvm::install (
     command     => $import_key,
     path        => '/usr/bin:/usr/sbin:/bin:/sbin',
     user        => $user,
-    onlyif      => "test `gpg --list-keys | grep '409B6B1796C275462A1703113804BB82D39DC0E3' | wc -l` -eq 0",
+    onlyif      => "test `gpg --list-keys | grep 'D39DC0E3' | wc -l` -eq 0",
     cwd         => $homedir,
     environment => "HOME=${homedir}",
   }
@@ -122,7 +122,7 @@ define single_user_rvm::install (
     command     => $import_key,
     path        => '/usr/bin:/usr/sbin:/bin:/sbin',
     user        => $user,
-    onlyif      => "test `gpg --list-keys | grep '7D2BAF1CF37B13E2069D6956105BD0E739499BDB' | wc -l` -eq 0",
+    onlyif      => "test `gpg --list-keys | grep '39499BDB' | wc -l` -eq 0",
     cwd         => $homedir,
     environment => "HOME=${homedir}",
   }
